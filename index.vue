@@ -1,46 +1,70 @@
 <script setup lang='ts'>
-import { computed } from 'vue'
-import type { PopoverPlacement } from 'naive-ui'
-import { NTooltip } from 'naive-ui'
-import Button from './Button.vue'
+import { computed, ref } from 'vue'
+import { NModal, NTabPane, NTabs } from 'naive-ui'
+import General from './General.vue'
+import Advanced from './Advanced.vue'
+import About from './About.vue'
+import { useAuthStore } from '@/store'
+import { SvgIcon } from '@/components/common'
 
 interface Props {
-  tooltip?: string
-  placement?: PopoverPlacement
+  visible: boolean
 }
 
 interface Emit {
-  (e: 'click'): void
+  (e: 'update:visible', visible: boolean): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  tooltip: '',
-  placement: 'bottom',
-})
+const props = defineProps<Props>()
 
 const emit = defineEmits<Emit>()
 
-const showTooltip = computed(() => Boolean(props.tooltip))
+const authStore = useAuthStore()
 
-function handleClick() {
-  emit('click')
-}
+const isChatGPTAPI = computed<boolean>(() => !!authStore.isChatGPTAPI)
+
+const active = ref('General')
+
+const show = computed({
+  get() {
+    return props.visible
+  },
+  set(visible: boolean) {
+    emit('update:visible', visible)
+  },
+})
 </script>
 
 <template>
-  <div v-if="showTooltip">
-    <NTooltip :placement="placement" trigger="hover">
-      <template #trigger>
-        <Button @click="handleClick">
-          <slot />
-        </Button>
-      </template>
-      {{ tooltip }}
-    </NTooltip>
-  </div>
-  <div v-else>
-    <Button @click="handleClick">
-      <slot />
-    </Button>
-  </div>
+  <NModal v-model:show="show" :auto-focus="false" preset="card" style="width: 95%; max-width: 640px">
+    <div>
+      <NTabs v-model:value="active" type="line" animated>
+        <NTabPane name="General" tab="General">
+          <template #tab>
+            <SvgIcon class="text-lg" icon="ri:file-user-line" />
+            <span class="ml-2">{{ $t('setting.general') }}</span>
+          </template>
+          <div class="min-h-[100px]">
+            <General />
+          </div>
+        </NTabPane>
+        <NTabPane v-if="isChatGPTAPI" name="Advanced" tab="Advanced">
+          <template #tab>
+            <SvgIcon class="text-lg" icon="ri:equalizer-line" />
+            <span class="ml-2">{{ $t('setting.advanced') }}</span>
+          </template>
+          <div class="min-h-[100px]">
+            <Advanced />
+          </div>
+        </NTabPane>
+        <NTabPane name="Config" tab="Config">
+          <template #tab>
+            <SvgIcon class="text-lg" icon="ri:list-settings-line" />
+            <span class="ml-2">{{ $t('setting.config') }}</span>
+          </template>
+          <About />
+        </NTabPane>
+      </NTabs>
+    </div>
+  </NModal>
 </template>
